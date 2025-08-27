@@ -13,19 +13,23 @@ export async function geocode(
   bust = false,
   signal?: AbortSignal
 ): Promise<LocationData> {
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=es&format=json&country_code=${COUNTRY_DEFAULT}`;
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=es&format=json`;
   
   const { json } = await fetchJSONWithCache(url, 86400 * 7, bust, { signal }); // 7 days cache
   
   if (!json?.results?.length) {
-    throw new Error("No se encontró la ubicación en Chile");
+    throw new Error("No se encontró ninguna ubicación");
   }
   
-  const result = json.results.find((x: any) => x.country_code === COUNTRY_DEFAULT) || json.results[0];
+  // Filtrar solo resultados de Chile
+  const chileResults = json.results.filter((x: any) => x.country_code === COUNTRY_DEFAULT);
   
-  if (!result) {
+  if (!chileResults.length) {
     throw new Error("Solo se permiten ubicaciones en Chile");
   }
+  
+  // Tomar el primer resultado chileno
+  const result = chileResults[0];
   
   const name = [result.name, result.admin1, result.country]
     .filter(Boolean)
