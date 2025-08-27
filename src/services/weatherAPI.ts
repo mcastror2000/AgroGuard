@@ -18,14 +18,14 @@ export async function geocode(
   const { json } = await fetchJSONWithCache(url, 86400 * 7, bust, { signal }); // 7 days cache
   
   if (!json?.results?.length) {
-    throw new Error("No se encontró ninguna ubicación");
+    throw new Error("Ubicación no encontrada. Ingrese una localidad cercana");
   }
   
   // Filtrar solo resultados de Chile
   const chileResults = json.results.filter((x: any) => x.country_code === COUNTRY_DEFAULT);
   
   if (!chileResults.length) {
-    throw new Error("Solo se permiten ubicaciones en Chile");
+    throw new Error("Ubicación no encontrada. Ingrese una localidad cercana");
   }
   
   // Tomar el primer resultado chileno
