@@ -27,7 +27,7 @@ export function FrostForecast({ frostBands, focusNight }: FrostForecastProps) {
     >
       <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
         <Snowflake className="w-5 h-5 text-blue-500" />
-        Pronóstico de Heladas (próximas 24h{focusNight ? ", nocturno" : ""})
+        Pronóstico de Heladas (próximas 48h{focusNight ? ", nocturno" : ""})
       </h2>
       
       <div className="overflow-x-auto">
@@ -70,7 +70,7 @@ export function FrostForecast({ frostBands, focusNight }: FrostForecastProps) {
             {!frostBands.length && (
               <tr>
                 <td className="py-6 text-gray-500 text-center" colSpan={4}>
-                  Sin datos suficientes para el pronóstico de las próximas 24 horas.
+                  Sin datos suficientes para el pronóstico de las próximas 48 horas.
                 </td>
               </tr>
             )}

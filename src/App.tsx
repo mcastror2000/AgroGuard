@@ -161,7 +161,7 @@ export default function App() {
     
     const { time, temperature_2m } = meteo.hourly;
     const now = Date.now();
-    const end = now + 24 * 3600 * 1000;
+    const end = now + 48 * 3600 * 1000;
     
     const isNight = (ts: number) => {
       const h = new Date(ts).getHours();
@@ -184,7 +184,7 @@ export default function App() {
     const start0 = Math.ceil(now / bandMs) * bandMs;
     const out = [];
     
-    for (let b = 0; b < 4; b++) {
+    for (let b = 0; b < 8; b++) {
       const bStart = start0 + b * bandMs;
       const bEnd = bStart + bandMs;
       const inBand = hours.filter(h => h.ts >= bStart && h.ts < bEnd);
