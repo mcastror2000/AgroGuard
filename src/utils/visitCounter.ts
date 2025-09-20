@@ -1,6 +1,21 @@
 // Contador de visitas persistente
 const VISIT_COUNTER_KEY = "agroguard:visit_counter";
 const SESSION_KEY = "agroguard:session_visited";
+const DEVICE_ID_KEY = "agroguard:device_id";
+
+// Generar un ID único para este dispositivo/navegador
+function getOrCreateDeviceId(): string {
+  try {
+    let deviceId = localStorage.getItem(DEVICE_ID_KEY);
+    if (!deviceId) {
+      deviceId = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem(DEVICE_ID_KEY, deviceId);
+    }
+    return deviceId;
+  } catch {
+    return 'dev_unknown';
+  }
+}
 
 export function incrementVisitCounter(): number {
   try {

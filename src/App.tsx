@@ -374,7 +374,7 @@ export default function App() {
               Desarrollado por <span className="font-semibold text-emerald-700">MC</span> • Versión 1.0
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              Visitas: {formatVisitCount(visitCount)}
+              Visitas en este dispositivo: {formatVisitCount(visitCount)}
             </p>
           </div>
         </motion.footer>
