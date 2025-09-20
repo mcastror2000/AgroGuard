@@ -7,6 +7,7 @@ import { RiskIndicator } from './components/RiskIndicator';
 import { TodaySummary } from './components/TodaySummary';
 import { FrostForecast } from './components/FrostForecast';
 import { WeatherForecast } from './components/WeatherForecast';
+import { incrementVisitCounter, formatVisitCount } from './utils/visitCounter';
 
 import { geocode, fetchForecast, fetchObservations, LocationData } from './services/weatherAPI';
 import { frostCategory, fungalRisk, uvCategory } from './utils/riskCalculations';
@@ -21,6 +22,13 @@ export default function App() {
   const [focusNight, setFocusNight] = useState(false);
   const [servedFromCache, setServedFromCache] = useState(false);
   const lastController = useRef<AbortController | null>(null);
+  const [visitCount, setVisitCount] = useState(0);
+
+  // Incrementar contador de visitas al cargar la aplicación
+  useEffect(() => {
+    const count = incrementVisitCounter();
+    setVisitCount(count);
+  }, []);
 
   // Search location function
   async function searchLocation(forceRefresh = false) {
@@ -364,6 +372,9 @@ export default function App() {
           <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 shadow-md">
             <p className="text-sm text-gray-600">
               Desarrollado por <span className="font-semibold text-emerald-700">MC</span> • Versión 1.0
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Visitas: {formatVisitCount(visitCount)}
             </p>
           </div>
         </motion.footer>
