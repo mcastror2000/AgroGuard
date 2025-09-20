@@ -7,7 +7,7 @@ import { RiskIndicator } from './components/RiskIndicator';
 import { TodaySummary } from './components/TodaySummary';
 import { FrostForecast } from './components/FrostForecast';
 import { WeatherForecast } from './components/WeatherForecast';
-import { incrementVisitCounter, formatVisitCount } from './utils/visitCounter';
+import { incrementVisitCounter, formatVisitCount, incrementGlobalCounter, getGlobalCounter } from './utils/visitCounter';
 
 import { geocode, fetchForecast, fetchObservations, LocationData } from './services/weatherAPI';
 import { frostCategory, fungalRisk, uvCategory } from './utils/riskCalculations';
@@ -23,11 +23,29 @@ export default function App() {
   const [servedFromCache, setServedFromCache] = useState(false);
   const lastController = useRef<AbortController | null>(null);
   const [visitCount, setVisitCount] = useState(0);
+  const [globalVisitCount, setGlobalVisitCount] = useState<number | null>(null);
 
-  // Incrementar contador de visitas al cargar la aplicación
+  // Incrementar contadores de visitas al cargar la aplicación
   useEffect(() => {
     const count = incrementVisitCounter();
     setVisitCount(count);
+    
+    // Incrementar contador global solo en nuevas sesiones
+    const hasVisitedThisSession = sessionStorage.getItem("agroguard:session_visited");
+    if (!hasVisitedThisSession) {
+      incrementGlobalCounter().then(globalCount => {
+        if (globalCount !== null) {
+          setGlobalVisitCount(globalCount);
+        }
+      });
+    } else {
+      // Solo obtener el contador global sin incrementar
+      getGlobalCounter().then(globalCount => {
+        if (globalCount !== null) {
+          setGlobalVisitCount(globalCount);
+        }
+      });
+    }
   }, []);
 
   // Search location function
@@ -373,9 +391,12 @@ export default function App() {
             <p className="text-sm text-gray-600">
               Desarrollado por <span className="font-semibold text-emerald-700">MC</span> • Versión 1.0
             </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Visitas en este dispositivo: {formatVisitCount(visitCount)}
-            </p>
+            <div className="text-xs text-gray-500 mt-1 space-y-1">
+              <p>Visitas en este dispositivo: {formatVisitCount(visitCount)}</p>
+              {globalVisitCount !== null && (
+                <p>Visitas totales: {formatVisitCount(globalVisitCount)}</p>
+              )}
+            </div>
           </div>
         </motion.footer>
       </div>

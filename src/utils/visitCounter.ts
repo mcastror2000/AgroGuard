@@ -2,6 +2,8 @@
 const VISIT_COUNTER_KEY = "agroguard:visit_counter";
 const SESSION_KEY = "agroguard:session_visited";
 const DEVICE_ID_KEY = "agroguard:device_id";
+const GLOBAL_COUNTER_URL = "https://api.countapi.xyz/hit/agroguard-app/visits";
+const GLOBAL_COUNTER_GET_URL = "https://api.countapi.xyz/get/agroguard-app/visits";
 
 // Generar un ID único para este dispositivo/navegador
 function getOrCreateDeviceId(): string {
@@ -14,6 +16,33 @@ function getOrCreateDeviceId(): string {
     return deviceId;
   } catch {
     return 'dev_unknown';
+  }
+}
+
+// Contador global usando servicio gratuito
+export async function incrementGlobalCounter(): Promise<number | null> {
+  try {
+    const response = await fetch(GLOBAL_COUNTER_URL);
+    if (!response.ok) throw new Error('Network error');
+    
+    const data = await response.json();
+    return data.value || null;
+  } catch (error) {
+    console.warn('No se pudo actualizar el contador global:', error);
+    return null;
+  }
+}
+
+export async function getGlobalCounter(): Promise<number | null> {
+  try {
+    const response = await fetch(GLOBAL_COUNTER_GET_URL);
+    if (!response.ok) throw new Error('Network error');
+    
+    const data = await response.json();
+    return data.value || null;
+  } catch (error) {
+    console.warn('No se pudo obtener el contador global:', error);
+    return null;
   }
 }
 
