@@ -395,6 +395,9 @@ export default function App() {
               {globalVisitCount !== null && (
                 <p>Visitas totales: {formatVisitCount(globalVisitCount)}</p>
               )}
+              {globalVisitCount === null && (
+                <p>Visitas totales: <span className="text-gray-400">cargando...</span></p>
+              )}
             </div>
           </div>
         </motion.footer>
