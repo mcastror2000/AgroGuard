@@ -48,10 +48,10 @@ export async function getGlobalCounter(): Promise<number | null> {
 
 export function incrementVisitCounter(): number {
   try {
-    // Verificar si ya se contó una visita en esta sesión
+    // Verificar si ya se contó una visita en esta sesión del navegador
     const hasVisitedThisSession = sessionStorage.getItem(SESSION_KEY);
     
-    // Solo incrementar si no se ha visitado en esta sesión
+    // Solo incrementar el contador local si no se ha visitado en esta sesión
     if (!hasVisitedThisSession) {
       const currentCount = getVisitCount();
       const newCount = currentCount + 1;
@@ -62,6 +62,7 @@ export function incrementVisitCounter(): number {
       return newCount;
     }
     
+    // Si ya visitó en esta sesión, devolver el contador actual sin incrementar
     return getVisitCount();
   } catch {
     return 1;

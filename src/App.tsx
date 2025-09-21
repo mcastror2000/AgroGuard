@@ -30,20 +30,19 @@ export default function App() {
     const count = incrementVisitCounter();
     setVisitCount(count);
     
-    // Incrementar contador global solo en nuevas sesiones
+    // Manejar contador global
     const hasVisitedThisSession = sessionStorage.getItem("agroguard:session_visited");
+    
     if (!hasVisitedThisSession) {
+      // Nueva sesión: incrementar contador global
+      sessionStorage.setItem("agroguard:session_visited", "true");
       incrementGlobalCounter().then(globalCount => {
-        if (globalCount !== null) {
-          setGlobalVisitCount(globalCount);
-        }
+        setGlobalVisitCount(globalCount);
       });
     } else {
-      // Solo obtener el contador global sin incrementar
+      // Misma sesión: solo obtener el valor actual
       getGlobalCounter().then(globalCount => {
-        if (globalCount !== null) {
-          setGlobalVisitCount(globalCount);
-        }
+        setGlobalVisitCount(globalCount);
       });
     }
   }, []);
