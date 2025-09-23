@@ -30,11 +30,11 @@ export default function App() {
     const count = incrementVisitCounter();
     setVisitCount(count);
     
-    // Manejar contador global
+    // Manejar contador global - CADA CARGA DE PÁGINA ES UNA VISITA
     const hasVisitedThisSession = sessionStorage.getItem("agroguard:session_visited");
     
     if (!hasVisitedThisSession) {
-      // Nueva sesión: incrementar contador global
+      // Nueva sesión: incrementar contador global (500, 501, 502...)
       sessionStorage.setItem("agroguard:session_visited", "true");
       incrementGlobalCounter().then(globalCount => {
         if (globalCount !== null) {
@@ -50,16 +50,18 @@ export default function App() {
       });
     }
     
-    // Timeout de seguridad: si después de 5 segundos no hay contador global, usar fallback
+    // Timeout de seguridad: si después de 3 segundos no hay contador global, usar fallback
     const timeout = setTimeout(() => {
       if (globalVisitCount === null) {
-        const fallback = Math.floor(Date.now() / 10000000) + 150;
+        // Fallback que empieza en 500 y usa localStorage
+        const fallbackKey = 'agroguard:global_fallback';
+        const fallback = parseInt(localStorage.getItem(fallbackKey) || '500');
         setGlobalVisitCount(fallback);
       }
-    }, 5000);
+    }, 3000);
     
     return () => clearTimeout(timeout);
-  }, []);
+  }, [globalVisitCount]);
 
   // Search location function
   async function searchLocation(forceRefresh = false) {

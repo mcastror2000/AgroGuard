@@ -20,16 +20,16 @@ function getOrCreateDeviceId(): string {
   }
 }
 
-// Contador global usando Firebase
+// Contador global usando Firebase - INCREMENTA CON CADA VISITA
 export async function incrementGlobalCounter(): Promise<number | null> {
   try {
     // Primero obtenemos el contador actual
     const getResponse = await fetch(`${FIREBASE_URL}/counter.json`);
-    let currentCount = 0;
+    let currentCount = 500; // Empezar desde 500 si no existe
     
     if (getResponse.ok) {
       const data = await getResponse.json();
-      currentCount = data?.count || 0;
+      currentCount = data?.count || 500;
     }
     
     // Incrementamos el contador
@@ -55,9 +55,16 @@ export async function incrementGlobalCounter(): Promise<number | null> {
   } catch (error) {
     console.warn('No se pudo actualizar el contador global:', error);
     
-    // Fallback: usar un contador simulado basado en el tiempo
-    const fallbackCount = Math.floor(Date.now() / 10000000) + 150;
-    return fallbackCount;
+    // Fallback: usar localStorage para simular contador global
+    const fallbackKey = 'agroguard:global_fallback';
+    try {
+      let fallbackCount = parseInt(localStorage.getItem(fallbackKey) || '500');
+      fallbackCount += 1;
+      localStorage.setItem(fallbackKey, fallbackCount.toString());
+      return fallbackCount;
+    } catch {
+      return 500;
+    }
   }
 }
 
@@ -67,13 +74,17 @@ export async function getGlobalCounter(): Promise<number | null> {
     if (!response.ok) throw new Error('Network error');
     
     const data = await response.json();
-    return data?.count || null;
+    return data?.count || 500;
   } catch (error) {
     console.warn('No se pudo obtener el contador global:', error);
     
-    // Fallback: usar un contador simulado basado en el tiempo
-    const fallbackCount = Math.floor(Date.now() / 10000000) + 150;
-    return fallbackCount;
+    // Fallback: usar localStorage
+    const fallbackKey = 'agroguard:global_fallback';
+    try {
+      return parseInt(localStorage.getItem(fallbackKey) || '500');
+    } catch {
+      return 500;
+    }
   }
 }
 
