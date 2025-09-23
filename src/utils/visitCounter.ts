@@ -56,7 +56,7 @@ export async function incrementGlobalCounter(): Promise<number | null> {
     console.warn('No se pudo actualizar el contador global:', error);
     
     // Fallback: usar un contador simulado basado en el tiempo
-    const fallbackCount = Math.floor(Date.now() / 100000) + 1000;
+    const fallbackCount = Math.floor(Date.now() / 10000000) + 150;
     return fallbackCount;
   }
 }
@@ -72,7 +72,7 @@ export async function getGlobalCounter(): Promise<number | null> {
     console.warn('No se pudo obtener el contador global:', error);
     
     // Fallback: usar un contador simulado basado en el tiempo
-    const fallbackCount = Math.floor(Date.now() / 100000) + 1000;
+    const fallbackCount = Math.floor(Date.now() / 10000000) + 150;
     return fallbackCount;
   }
 }

@@ -53,7 +53,7 @@ export default function App() {
     // Timeout de seguridad: si después de 5 segundos no hay contador global, usar fallback
     const timeout = setTimeout(() => {
       if (globalVisitCount === null) {
-        const fallback = Math.floor(Date.now() / 100000) + 1000;
+        const fallback = Math.floor(Date.now() / 10000000) + 150;
         setGlobalVisitCount(fallback);
       }
     }, 5000);
