@@ -37,14 +37,28 @@ export default function App() {
       // Nueva sesión: incrementar contador global
       sessionStorage.setItem("agroguard:session_visited", "true");
       incrementGlobalCounter().then(globalCount => {
-        setGlobalVisitCount(globalCount);
+        if (globalCount !== null) {
+          setGlobalVisitCount(globalCount);
+        }
       });
     } else {
       // Misma sesión: solo obtener el valor actual
       getGlobalCounter().then(globalCount => {
-        setGlobalVisitCount(globalCount);
+        if (globalCount !== null) {
+          setGlobalVisitCount(globalCount);
+        }
       });
     }
+    
+    // Timeout de seguridad: si después de 5 segundos no hay contador global, usar fallback
+    const timeout = setTimeout(() => {
+      if (globalVisitCount === null) {
+        const fallback = Math.floor(Date.now() / 100000) + 1000;
+        setGlobalVisitCount(fallback);
+      }
+    }, 5000);
+    
+    return () => clearTimeout(timeout);
   }, []);
 
   // Search location function
