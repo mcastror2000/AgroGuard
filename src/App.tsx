@@ -13,7 +13,7 @@ import { geocode, fetchForecast, fetchObservations, LocationData } from './servi
 import { frostCategory, fungalRisk, uvCategory } from './utils/riskCalculations';
 
 export default function App() {
-  const [query, setQuery] = useState(() => localStorage.getItem("agroguard:lastQuery") || "");
+  const [query, setQuery] = useState("");
   const [place, setPlace] = useState<LocationData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
