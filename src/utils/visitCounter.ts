@@ -1,64 +1,39 @@
-// Contador de visitas persistente
+// Contador de visitas persistente usando CountAPI
 const VISIT_COUNTER_KEY = "agroguard:visit_counter";
 const SESSION_KEY = "agroguard:session_visited";
-const DEVICE_ID_KEY = "agroguard:device_id";
 
-// Usando Firebase Realtime Database público (sin autenticación)
-const FIREBASE_URL = "https://agroguard-counter-default-rtdb.firebaseio.com";
+// CountAPI - Servicio gratuito de contadores
+const COUNTAPI_BASE = "https://api.countapi.xyz";
+const COUNTER_NAMESPACE = "agroguard";
+const COUNTER_KEY = "total-visits";
 
-// Generar un ID único para este dispositivo/navegador
-function getOrCreateDeviceId(): string {
-  try {
-    let deviceId = localStorage.getItem(DEVICE_ID_KEY);
-    if (!deviceId) {
-      deviceId = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem(DEVICE_ID_KEY, deviceId);
-    }
-    return deviceId;
-  } catch {
-    return 'dev_unknown';
-  }
-}
-
-// Contador global usando Firebase - INCREMENTA CON CADA VISITA
+// Contador global usando CountAPI - INCREMENTA CON CADA VISITA
 export async function incrementGlobalCounter(): Promise<number | null> {
   try {
-    // Usar transacción atómica para evitar condiciones de carrera
-    const response = await fetch(`${FIREBASE_URL}/counter.json`);
-    let currentData = { count: 500 }; // Valor por defecto
+    console.log('🆕 Incrementando contador global con CountAPI...');
     
-    if (response.ok) {
-      const data = await response.json();
-      if (data && typeof data.count === 'number') {
-        currentData = data;
-      }
-    }
-    
-    // Incrementar el contador
-    const newCount = currentData.count + 1;
-    
-    // Actualizar con el nuevo valor
-    const updateResponse = await fetch(`${FIREBASE_URL}/counter.json`, {
-      method: 'PUT',
+    // Usar CountAPI para incrementar el contador
+    const response = await fetch(`${COUNTAPI_BASE}/hit/${COUNTER_NAMESPACE}/${COUNTER_KEY}`, {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        count: newCount,
-        lastUpdated: new Date().toISOString(),
-        lastDevice: getOrCreateDeviceId()
-      })
+        'Accept': 'application/json',
+      }
     });
     
-    if (updateResponse.ok) {
-      console.log(`✅ Contador global incrementado: ${currentData.count} → ${newCount}`);
-      return newCount;
+    if (!response.ok) {
+      throw new Error(`CountAPI error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data && typeof data.value === 'number') {
+      console.log(`✅ Contador global incrementado a: ${data.value}`);
+      return data.value;
     } else {
-      console.error('❌ Error al actualizar contador:', updateResponse.status);
-      throw new Error(`Update failed: ${updateResponse.status}`);
+      throw new Error('Invalid response from CountAPI');
     }
   } catch (error) {
-    console.error('❌ Error en incrementGlobalCounter:', error);
+    console.error('❌ Error con CountAPI:', error);
     
     // Fallback: usar localStorage para simular contador global
     const fallbackKey = 'agroguard:global_fallback';
@@ -77,15 +52,29 @@ export async function incrementGlobalCounter(): Promise<number | null> {
 
 export async function getGlobalCounter(): Promise<number | null> {
   try {
-    const response = await fetch(`${FIREBASE_URL}/counter.json`);
-    if (!response.ok) throw new Error('Network error');
+    console.log('📊 Obteniendo contador global de CountAPI...');
+    
+    const response = await fetch(`${COUNTAPI_BASE}/get/${COUNTER_NAMESPACE}/${COUNTER_KEY}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`CountAPI error: ${response.status}`);
+    }
     
     const data = await response.json();
-    const count = data?.count || 500;
-    console.log(`📊 Contador global obtenido: ${count}`);
-    return count;
+    
+    if (data && typeof data.value === 'number') {
+      console.log(`📊 Contador global obtenido: ${data.value}`);
+      return data.value;
+    } else {
+      throw new Error('Invalid response from CountAPI');
+    }
   } catch (error) {
-    console.error('❌ Error al obtener contador global:', error);
+    console.error('❌ Error al obtener contador de CountAPI:', error);
     
     // Fallback: usar localStorage
     const fallbackKey = 'agroguard:global_fallback';
@@ -97,6 +86,30 @@ export async function getGlobalCounter(): Promise<number | null> {
       console.error('❌ Fallback de obtención también falló');
       return 500;
     }
+  }
+}
+
+// Inicializar contador en CountAPI con valor inicial de 500
+export async function initializeGlobalCounter(): Promise<void> {
+  try {
+    console.log('🔧 Inicializando contador en CountAPI...');
+    
+    // Crear/configurar el contador con valor inicial de 500
+    const response = await fetch(`${COUNTAPI_BASE}/create?namespace=${COUNTER_NAMESPACE}&key=${COUNTER_KEY}&value=500`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Contador inicializado:', data);
+    } else {
+      console.log('ℹ️ Contador ya existe o error al inicializar');
+    }
+  } catch (error) {
+    console.log('ℹ️ No se pudo inicializar contador:', error);
   }
 }
 

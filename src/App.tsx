@@ -7,7 +7,7 @@ import { RiskIndicator } from './components/RiskIndicator';
 import { TodaySummary } from './components/TodaySummary';
 import { FrostForecast } from './components/FrostForecast';
 import { WeatherForecast } from './components/WeatherForecast';
-import { incrementVisitCounter, formatVisitCount, incrementGlobalCounter, getGlobalCounter } from './utils/visitCounter';
+import { incrementVisitCounter, formatVisitCount, incrementGlobalCounter, getGlobalCounter, initializeGlobalCounter } from './utils/visitCounter';
 
 import { geocode, fetchForecast, fetchObservations, LocationData } from './services/weatherAPI';
 import { frostCategory, fungalRisk, uvCategory } from './utils/riskCalculations';
@@ -27,6 +27,9 @@ export default function App() {
 
   // Incrementar contadores de visitas al cargar la aplicación
   useEffect(() => {
+    // Inicializar contador global si es necesario
+    initializeGlobalCounter();
+    
     const count = incrementVisitCounter();
     setVisitCount(count);
     
@@ -36,37 +39,37 @@ export default function App() {
     if (!hasVisitedThisSession) {
       // Nueva sesión: incrementar contador global (500, 501, 502...)
       sessionStorage.setItem("agroguard:session_visited", "true");
-      console.log('🆕 Nueva sesión detectada, incrementando contador global...');
+      console.log('🆕 Nueva sesión detectada, incrementando contador global con CountAPI...');
       incrementGlobalCounter().then(globalCount => {
         if (globalCount !== null) {
           console.log(`✅ Contador global actualizado a: ${globalCount}`);
           setGlobalVisitCount(globalCount);
         } else {
-          console.error('❌ No se pudo incrementar el contador global');
+          console.error('❌ No se pudo incrementar el contador global con CountAPI');
         }
       });
     } else {
       // Misma sesión: solo obtener el valor actual
-      console.log('🔄 Misma sesión, obteniendo contador actual...');
+      console.log('🔄 Misma sesión, obteniendo contador actual de CountAPI...');
       getGlobalCounter().then(globalCount => {
         if (globalCount !== null) {
           console.log(`📊 Contador global actual: ${globalCount}`);
           setGlobalVisitCount(globalCount);
         } else {
-          console.error('❌ No se pudo obtener el contador global');
+          console.error('❌ No se pudo obtener el contador global de CountAPI');
         }
       });
     }
     
-    // Timeout de seguridad: si después de 3 segundos no hay contador global, usar fallback
+    // Timeout de seguridad: si después de 5 segundos no hay contador global, usar fallback
     const timeout = setTimeout(() => {
       if (globalVisitCount === null) {
-        // Fallback que empieza en 500 y usa localStorage
+        console.log('⏰ Timeout: usando fallback después de 5 segundos');
         const fallbackKey = 'agroguard:global_fallback';
         const fallback = parseInt(localStorage.getItem(fallbackKey) || '500');
         setGlobalVisitCount(fallback);
       }
-    }, 3000);
+    }, 5000);
     
     return () => clearTimeout(timeout);
   }, [globalVisitCount]);
