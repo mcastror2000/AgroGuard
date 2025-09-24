@@ -7,7 +7,13 @@ import { RiskIndicator } from './components/RiskIndicator';
 import { TodaySummary } from './components/TodaySummary';
 import { FrostForecast } from './components/FrostForecast';
 import { WeatherForecast } from './components/WeatherForecast';
-import { incrementVisitCounter, formatVisitCount, incrementGlobalCounter, getGlobalCounter, initializeGlobalCounter } from './utils/visitCounter';
+import { 
+  incrementLocalCounter, 
+  getFallbackGlobalCount, 
+  incrementGlobalCounter, 
+  getGlobalCounter, 
+  formatVisitCount 
+} from './utils/visitCounter';
 
 import { geocode, fetchForecast, fetchObservations, LocationData } from './services/weatherAPI';
 import { frostCategory, fungalRisk, uvCategory } from './utils/riskCalculations';
@@ -23,14 +29,76 @@ export default function App() {
   const [servedFromCache, setServedFromCache] = useState(false);
   const lastController = useRef<AbortController | null>(null);
   const [visitCount, setVisitCount] = useState(0);
-  const [globalVisitCount, setGlobalVisitCount] = useState<number | null>(null);
 
   // Incrementar contadores de visitas al cargar la aplicación
   useEffect(() => {
-    // Inicializar contador global si es necesario
-    initializeGlobalCounter();
+    console.log('🚀 Iniciando contadores de visitas...');
     
-    const count = incrementVisitCounter();
+    // Incrementar contador local
+    const localCount = incrementLocalCounter();
+    setVisitCount(localCount);
+    
+    // Manejar contador global
+    const hasVisitedThisSession = sessionStorage.getItem("agroguard:session_visited");
+    
+    if (!hasVisitedThisSession) {
+      // Nueva sesión: incrementar contador global
+      console.log('🆕 Nueva sesión detectada, incrementando contador global...');
+      
+      incrementGlobalCounter()
+        .then(globalCount => {
+          if (globalCount !== null) {
+            console.log(`✅ Contador global actualizado a: ${globalCount}`);
+            setGlobalVisitCount(globalCount);
+          } else {
+            console.log('⚠️ CountAPI falló, usando fallback...');
+            const fallbackCount = getFallbackGlobalCount();
+            setGlobalVisitCount(fallbackCount);
+          }
+        })
+        .catch(error => {
+          console.error('❌ Error al incrementar contador global:', error);
+          const fallbackCount = getFallbackGlobalCount();
+          setGlobalVisitCount(fallbackCount);
+        });
+    } else {
+      // Misma sesión: solo obtener el valor actual
+      console.log('🔄 Misma sesión, obteniendo contador actual...');
+      
+      getGlobalCounter()
+        .then(globalCount => {
+          if (globalCount !== null) {
+            console.log(`📊 Contador global actual: ${globalCount}`);
+            setGlobalVisitCount(globalCount);
+          } else {
+            console.log('⚠️ CountAPI falló al obtener, usando fallback...');
+            const fallbackCount = getFallbackGlobalCount();
+            setGlobalVisitCount(fallbackCount);
+          }
+        })
+        .catch(error => {
+          console.error('❌ Error al obtener contador global:', error);
+          const fallbackCount = getFallbackGlobalCount();
+          setGlobalVisitCount(fallbackCount);
+        });
+    }
+    
+    // Timeout de seguridad
+    const timeout = setTimeout(() => {
+      if (globalVisitCount === null) {
+        console.log('⏰ Timeout: usando fallback después de 8 segundos');
+        const fallbackCount = getFallbackGlobalCount();
+        setGlobalVisitCount(fallbackCount);
+      }
+    }, 8000);
+    
+    return () => clearTimeout(timeout);
+  }, []); // Solo ejecutar una vez al montar el componente
+
+  // Importar las funciones necesarias
+  const { incrementLocalCounter, getFallbackGlobalCount, incrementGlobalCounter, getGlobalCounter, formatVisitCount } = require('./utils/visitCounter');
+
+  // Resto del código permanece igual...
     setVisitCount(count);
     
     // Manejar contador global - CADA CARGA DE PÁGINA ES UNA VISITA
@@ -71,10 +139,6 @@ export default function App() {
       }
     }, 5000);
     
-    return () => clearTimeout(timeout);
-  }, [globalVisitCount]);
-
-  // Search location function
   async function searchLocation(forceRefresh = false) {
     if (lastController.current) {
       try {
