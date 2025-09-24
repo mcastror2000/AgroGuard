@@ -36,16 +36,24 @@ export default function App() {
     if (!hasVisitedThisSession) {
       // Nueva sesión: incrementar contador global (500, 501, 502...)
       sessionStorage.setItem("agroguard:session_visited", "true");
+      console.log('🆕 Nueva sesión detectada, incrementando contador global...');
       incrementGlobalCounter().then(globalCount => {
         if (globalCount !== null) {
+          console.log(`✅ Contador global actualizado a: ${globalCount}`);
           setGlobalVisitCount(globalCount);
+        } else {
+          console.error('❌ No se pudo incrementar el contador global');
         }
       });
     } else {
       // Misma sesión: solo obtener el valor actual
+      console.log('🔄 Misma sesión, obteniendo contador actual...');
       getGlobalCounter().then(globalCount => {
         if (globalCount !== null) {
+          console.log(`📊 Contador global actual: ${globalCount}`);
           setGlobalVisitCount(globalCount);
+        } else {
+          console.error('❌ No se pudo obtener el contador global');
         }
       });
     }

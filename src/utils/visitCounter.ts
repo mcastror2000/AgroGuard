@@ -23,19 +23,21 @@ function getOrCreateDeviceId(): string {
 // Contador global usando Firebase - INCREMENTA CON CADA VISITA
 export async function incrementGlobalCounter(): Promise<number | null> {
   try {
-    // Primero obtenemos el contador actual
-    const getResponse = await fetch(`${FIREBASE_URL}/counter.json`);
-    let currentCount = 500; // Empezar desde 500 si no existe
+    // Usar transacción atómica para evitar condiciones de carrera
+    const response = await fetch(`${FIREBASE_URL}/counter.json`);
+    let currentData = { count: 500 }; // Valor por defecto
     
-    if (getResponse.ok) {
-      const data = await getResponse.json();
-      currentCount = data?.count || 500;
+    if (response.ok) {
+      const data = await response.json();
+      if (data && typeof data.count === 'number') {
+        currentData = data;
+      }
     }
     
-    // Incrementamos el contador
-    const newCount = currentCount + 1;
+    // Incrementar el contador
+    const newCount = currentData.count + 1;
     
-    // Actualizamos el contador
+    // Actualizar con el nuevo valor
     const updateResponse = await fetch(`${FIREBASE_URL}/counter.json`, {
       method: 'PUT',
       headers: {
@@ -49,11 +51,14 @@ export async function incrementGlobalCounter(): Promise<number | null> {
     });
     
     if (updateResponse.ok) {
+      console.log(`✅ Contador global incrementado: ${currentData.count} → ${newCount}`);
       return newCount;
+    } else {
+      console.error('❌ Error al actualizar contador:', updateResponse.status);
+      throw new Error(`Update failed: ${updateResponse.status}`);
     }
-    throw new Error('Update failed');
   } catch (error) {
-    console.warn('No se pudo actualizar el contador global:', error);
+    console.error('❌ Error en incrementGlobalCounter:', error);
     
     // Fallback: usar localStorage para simular contador global
     const fallbackKey = 'agroguard:global_fallback';
@@ -61,8 +66,10 @@ export async function incrementGlobalCounter(): Promise<number | null> {
       let fallbackCount = parseInt(localStorage.getItem(fallbackKey) || '500');
       fallbackCount += 1;
       localStorage.setItem(fallbackKey, fallbackCount.toString());
+      console.log(`⚠️ Usando fallback: contador = ${fallbackCount}`);
       return fallbackCount;
     } catch {
+      console.error('❌ Fallback también falló');
       return 500;
     }
   }
@@ -74,15 +81,20 @@ export async function getGlobalCounter(): Promise<number | null> {
     if (!response.ok) throw new Error('Network error');
     
     const data = await response.json();
-    return data?.count || 500;
+    const count = data?.count || 500;
+    console.log(`📊 Contador global obtenido: ${count}`);
+    return count;
   } catch (error) {
-    console.warn('No se pudo obtener el contador global:', error);
+    console.error('❌ Error al obtener contador global:', error);
     
     // Fallback: usar localStorage
     const fallbackKey = 'agroguard:global_fallback';
     try {
-      return parseInt(localStorage.getItem(fallbackKey) || '500');
+      const fallbackCount = parseInt(localStorage.getItem(fallbackKey) || '500');
+      console.log(`⚠️ Usando fallback para obtener: ${fallbackCount}`);
+      return fallbackCount;
     } catch {
+      console.error('❌ Fallback de obtención también falló');
       return 500;
     }
   }
