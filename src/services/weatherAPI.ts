@@ -27,30 +27,77 @@ export async function geocode(
   bust = false,
   signal?: AbortSignal
 ): Promise<LocationData> {
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=20&language=es&format=json`;
+  // Intentar múltiples variaciones de búsqueda
+  const searchVariations = [
+    query.trim(),
+    query.replace(/región\s+/gi, '').trim(), // "Región Metropolitana" -> "Metropolitana"
+    query.replace(/\s+región$/gi, '').trim(), // "Metropolitana Región" -> "Metropolitana"
+    query.split(',')[0].trim(), // Tomar solo la primera parte si hay comas
+    query.replace(/\s+/g, '+').trim() // Reemplazar espacios con +
+  ].filter((v, i, arr) => arr.indexOf(v) === i); // Eliminar duplicados
   
-  const { json } = await fetchJSONWithCache(url, 86400 * 7, bust, { signal }); // 7 days cache
+  let bestResult = null;
+  let allResults: any[] = [];
   
-  if (!json?.results?.length) {
-    throw new Error("Ubicación no encontrada. Ingrese una localidad cercana");
+  // Intentar cada variación hasta encontrar resultados
+  for (const variation of searchVariations) {
+    try {
+      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(variation)}&count=20&language=es&format=json`;
+      const { json } = await fetchJSONWithCache(url, 86400 * 7, bust, { signal });
+      
+      if (json?.results?.length) {
+        const chileResults = json.results.filter((x: any) => x.country_code === COUNTRY_DEFAULT);
+        if (chileResults.length) {
+          allResults = [...allResults, ...chileResults];
+          if (!bestResult) bestResult = chileResults[0];
+        }
+      }
+    } catch (error) {
+      // Continuar con la siguiente variación
+      continue;
+    }
   }
   
-  // Filtrar solo resultados de Chile
-  const chileResults = json.results.filter((x: any) => x.country_code === COUNTRY_DEFAULT);
+  // Si no encontramos nada, intentar búsquedas más amplias
+  if (!allResults.length) {
+    const broadSearches = [
+      'Santiago', // Fallback a Santiago
+      'Chile', // Fallback a Chile
+      query.split(' ')[0] // Primera palabra del query
+    ];
+    
+    for (const broad of broadSearches) {
+      try {
+        const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(broad)}&count=5&language=es&format=json`;
+        const { json } = await fetchJSONWithCache(url, 86400 * 7, bust, { signal });
+        
+        if (json?.results?.length) {
+          const chileResults = json.results.filter((x: any) => x.country_code === COUNTRY_DEFAULT);
+          if (chileResults.length) {
+            allResults = chileResults;
+            bestResult = chileResults[0];
+            break;
+          }
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
   
-  if (!chileResults.length) {
-    throw new Error("Ubicación no encontrada. Ingrese una localidad cercana");
+  if (!allResults.length) {
+    throw new Error(`No se encontraron datos meteorológicos para "${query}". Intenta con una ciudad específica como "Santiago", "Valparaíso" o "Concepción"`);
   }
   
   // Ordenar resultados por relevancia (población, tipo de lugar, etc.)
-  const sortedResults = chileResults.sort((a: any, b: any) => {
+  const sortedResults = allResults.sort((a: any, b: any) => {
     // Priorizar ciudades sobre pueblos
     const aScore = (a.population || 0) + (a.feature_code === 'PPLA' ? 100000 : 0);
     const bScore = (b.population || 0) + (b.feature_code === 'PPLA' ? 100000 : 0);
     return bScore - aScore;
   });
   
-  const result = sortedResults[0];
+  const result = bestResult || sortedResults[0];
   
   const name = [result.name, result.admin1, result.country]
     .filter(Boolean)
@@ -71,25 +118,56 @@ export async function searchLocations(
   bust = false,
   signal?: AbortSignal
 ): Promise<SearchResult[]> {
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=20&language=es&format=json`;
+  if (query.length < 2) return [];
   
-  const { json } = await fetchJSONWithCache(url, 86400 * 7, bust, { signal });
+  // Crear variaciones de búsqueda más inteligentes
+  const searchVariations = [
+    query.trim(),
+    query.replace(/región\s+/gi, '').trim(),
+    query.replace(/\s+región$/gi, '').trim(),
+    query.split(',')[0].trim()
+  ].filter((v, i, arr) => arr.indexOf(v) === i && v.length >= 2);
   
-  if (!json?.results?.length) {
-    return [];
+  let allResults: any[] = [];
+  
+  // Intentar cada variación
+  for (const variation of searchVariations) {
+    try {
+      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(variation)}&count=15&language=es&format=json`;
+      const { json } = await fetchJSONWithCache(url, 86400 * 7, bust, { signal });
+      
+      if (json?.results?.length) {
+        const chileResults = json.results.filter((x: any) => x.country_code === COUNTRY_DEFAULT);
+        allResults = [...allResults, ...chileResults];
+      }
+    } catch {
+      continue;
+    }
   }
   
-  // Filtrar y procesar resultados de Chile
-  const chileResults = json.results
-    .filter((x: any) => x.country_code === COUNTRY_DEFAULT)
+  // Eliminar duplicados y procesar resultados
+  const uniqueResults = allResults.filter((result, index, arr) => 
+    arr.findIndex(r => r.latitude === result.latitude && r.longitude === result.longitude) === index
+  );
+  
+  const processedResults = uniqueResults
     .map((result: any) => {
       const name = [result.name, result.admin1].filter(Boolean).join(", ");
       
-      // Calcular score de relevancia
+      // Calcular score de relevancia mejorado
       let relevanceScore = result.population || 0;
+      
+      // Bonus por tipo de lugar
       if (result.feature_code === 'PPLA') relevanceScore += 100000; // Capital regional
-      if (result.feature_code === 'PPLA2') relevanceScore += 50000; // Capital provincial
+      if (result.feature_code === 'PPLA2') relevanceScore += 50000; // Capital provincial  
       if (result.feature_code === 'PPL') relevanceScore += 10000; // Ciudad
+      
+      // Bonus por coincidencia exacta o parcial con el query
+      const queryLower = query.toLowerCase();
+      const nameLower = result.name.toLowerCase();
+      if (nameLower === queryLower) relevanceScore += 50000;
+      else if (nameLower.includes(queryLower)) relevanceScore += 25000;
+      else if (queryLower.includes(nameLower)) relevanceScore += 15000;
       
       // Determinar tipo
       let type: 'city' | 'town' | 'village' | 'administrative' = 'village';
@@ -109,9 +187,9 @@ export async function searchLocations(
       };
     })
     .sort((a, b) => b.relevanceScore - a.relevanceScore)
-    .slice(0, 10);
+    .slice(0, 8);
   
-  return chileResults;
+  return processedResults;
 }
 export async function fetchForecast(
   lat: number,

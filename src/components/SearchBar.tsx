@@ -63,10 +63,12 @@ export function SearchBar({
       <div className="mb-4 p-3 bg-emerald-50 rounded-lg text-sm text-emerald-800">
         <div className="flex items-center gap-2 mb-1">
           <MapPin className="w-4 h-4" />
-          <strong>Búsqueda optimizada para Chile</strong>
+          <strong>Búsqueda inteligente para Chile</strong>
         </div>
         <div className="text-xs text-emerald-700">
-          Busca por ciudad, comuna o región. Ejemplos: "Santiago", "Valparaíso", "Temuco", "Región Metropolitana"
+          Busca por ciudad, comuna o región. Si no encuentra tu ubicación exacta, mostrará la más cercana disponible.
+          <br />
+          <strong>Ejemplos:</strong> "Santiago", "Valparaíso", "Temuco", "Metropolitana", "Antofagasta"
         </div>
       </div>
 

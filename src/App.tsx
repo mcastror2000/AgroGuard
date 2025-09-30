@@ -125,7 +125,18 @@ export default function App() {
       setObs(observations);
     } catch (e: any) {
       if (e?.name === "AbortError") return;
-      setError(e?.message || "Error buscando ubicación");
+      
+      // Mensajes de error más amigables
+      let errorMessage = "Error buscando ubicación";
+      if (e?.message) {
+        errorMessage = e.message;
+      } else if (e?.name === "NetworkError" || e?.message?.includes("fetch")) {
+        errorMessage = "Error de conexión. Verifica tu internet e intenta nuevamente.";
+      } else if (e?.message?.includes("not found")) {
+        errorMessage = `No se encontraron datos para "${query}". Intenta con una ciudad más grande como Santiago, Valparaíso o Concepción.`;
+      }
+      
+      setError(errorMessage);
       setMeteo(null);
       setObs(null);
     } finally {
