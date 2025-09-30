@@ -25,7 +25,7 @@ export function SearchBar({
   onQueryChange,
   onSearch,
   onRefresh,
-  onClear
+  onClear,
   onSelectLocation,
   onFocusSearch,
   onBlurSearch
