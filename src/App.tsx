@@ -9,7 +9,7 @@ import { FrostForecast } from './components/FrostForecast';
 import { WeatherForecast } from './components/WeatherForecast';
 import { incrementVisitCounter, formatVisitCount, incrementGlobalCounter, getGlobalCounter } from './utils/visitCounter';
 
-import { geocode, fetchForecast, fetchObservations, LocationData } from './services/weatherAPI';
+import { geocode, fetchForecast, fetchObservations, searchLocations, LocationData, SearchResult } from './services/weatherAPI';
 import { frostCategory, fungalRisk, uvCategory } from './utils/riskCalculations';
 
 export default function App() {
@@ -24,6 +24,9 @@ export default function App() {
   const lastController = useRef<AbortController | null>(null);
   const [visitCount, setVisitCount] = useState(0);
   const [globalVisitCount, setGlobalVisitCount] = useState<number | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Incrementar contadores de visitas al cargar la aplicación
   useEffect(() => {
@@ -63,6 +66,33 @@ export default function App() {
     return () => clearTimeout(timeout);
   }, [globalVisitCount]);
 
+  // Búsqueda de sugerencias con debounce
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (query.trim().length >= 2) {
+      searchTimeoutRef.current = setTimeout(async () => {
+        try {
+          const results = await searchLocations(query.trim());
+          setSearchResults(results);
+        } catch (error) {
+          console.warn('Error buscando sugerencias:', error);
+          setSearchResults([]);
+        }
+      }, 300);
+    } else {
+      setSearchResults([]);
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [query]);
+
   // Search location function
   async function searchLocation(forceRefresh = false) {
     if (lastController.current) {
@@ -80,6 +110,7 @@ export default function App() {
       setPlace(null);
       setMeteo(null);
       setObs(null);
+      setShowSuggestions(false);
 
       const location = await geocode(query, forceRefresh, controller.signal);
       setPlace(location);
@@ -102,12 +133,24 @@ export default function App() {
     }
   }
 
+  // Seleccionar ubicación desde sugerencias
+  function selectLocation(location: SearchResult) {
+    setQuery(location.name);
+    setShowSuggestions(false);
+    setPlace(location);
+    
+    // Buscar datos meteorológicos para la ubicación seleccionada
+    setTimeout(() => searchLocation(false), 100);
+  }
+
   // Clear all data
   function clearData() {
     setPlace(null);
     setMeteo(null);
     setObs(null);
     setError("");
+    setSearchResults([]);
+    setShowSuggestions(false);
   }
 
   // Save last query to localStorage
@@ -310,10 +353,15 @@ export default function App() {
         <SearchBar
           query={query}
           loading={loading}
+          searchResults={searchResults}
+          showSuggestions={showSuggestions}
           onQueryChange={setQuery}
           onSearch={() => searchLocation(false)}
           onRefresh={() => searchLocation(true)}
           onClear={clearData}
+          onSelectLocation={selectLocation}
+          onFocusSearch={() => setShowSuggestions(true)}
+          onBlurSearch={() => setTimeout(() => setShowSuggestions(false), 200)}
         />
 
         {/* Night Focus Toggle */}
@@ -349,6 +397,13 @@ export default function App() {
           <div className="mb-2 text-center">
             <div className="text-lg font-semibold text-gray-800">
               📍 {place.name}
+              {place.population && (
+                <span className="ml-2 text-sm text-gray-600">
+                  ({place.population > 1000000 ? `${(place.population / 1000000).toFixed(1)}M` : 
+                    place.population > 1000 ? `${Math.round(place.population / 1000)}k` : 
+                    place.population} hab.)
+                </span>
+              )}
             </div>
             {meteo && (
               <div className="text-xs text-gray-600 mt-1">
