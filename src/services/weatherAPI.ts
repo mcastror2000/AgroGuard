@@ -9,6 +9,14 @@ export const CHILE_REGIONS = [
   "La Araucanía", "Los Ríos", "Los Lagos", "Aysén", "Magallanes"
 ];
 
+// Ciudades principales de Chile con mejor cobertura meteorológica
+const MAJOR_CITIES = [
+  "Santiago", "Valparaíso", "Concepción", "La Serena", "Antofagasta",
+  "Temuco", "Rancagua", "Talca", "Arica", "Iquique", "Copiapó",
+  "Ovalle", "Quillota", "Curicó", "Chillán", "Los Ángeles", "Osorno",
+  "Valdivia", "Puerto Montt", "Coyhaique", "Punta Arenas"
+];
+
 export interface LocationData {
   name: string;
   lat: number;
@@ -22,19 +30,20 @@ export interface SearchResult extends LocationData {
   relevanceScore: number;
   type: 'city' | 'town' | 'village' | 'administrative';
 }
+
 export async function geocode(
   query: string,
   bust = false,
   signal?: AbortSignal
 ): Promise<LocationData> {
-  // Intentar múltiples variaciones de búsqueda
+  // Crear variaciones de búsqueda más inteligentes
   const searchVariations = [
     query.trim(),
     query.replace(/región\s+/gi, '').trim(), // "Región Metropolitana" -> "Metropolitana"
     query.replace(/\s+región$/gi, '').trim(), // "Metropolitana Región" -> "Metropolitana"
     query.split(',')[0].trim(), // Tomar solo la primera parte si hay comas
     query.replace(/\s+/g, '+').trim() // Reemplazar espacios con +
-  ].filter((v, i, arr) => arr.indexOf(v) === i); // Eliminar duplicados
+  ].filter((v, i, arr) => arr.indexOf(v) === i && v.length >= 2); // Eliminar duplicados y muy cortos
   
   let bestResult = null;
   let allResults: any[] = [];
@@ -58,17 +67,19 @@ export async function geocode(
     }
   }
   
-  // Si no encontramos nada, intentar búsquedas más amplias
+  // Si no encontramos nada, intentar búsquedas de fallback
   if (!allResults.length) {
-    const broadSearches = [
-      'Santiago', // Fallback a Santiago
-      'Chile', // Fallback a Chile
+    const fallbackSearches = [
+      'Santiago', // Fallback principal
+      'Valparaíso', // Segundo fallback
       query.split(' ')[0] // Primera palabra del query
     ];
     
-    for (const broad of broadSearches) {
+    for (const fallback of fallbackSearches) {
+      if (fallback.length < 2) continue;
+      
       try {
-        const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(broad)}&count=5&language=es&format=json`;
+        const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(fallback)}&count=10&language=es&format=json`;
         const { json } = await fetchJSONWithCache(url, 86400 * 7, bust, { signal });
         
         if (json?.results?.length) {
@@ -86,7 +97,7 @@ export async function geocode(
   }
   
   if (!allResults.length) {
-    throw new Error(`No se encontraron datos meteorológicos para "${query}". Intenta con una ciudad específica como "Santiago", "Valparaíso" o "Concepción"`);
+    throw new Error(`No se encontraron datos meteorológicos para "${query}". La base de datos meteorológica tiene cobertura limitada. Intenta con ciudades principales como "Santiago", "Valparaíso", "Concepción" o "Temuco".`);
   }
   
   // Ordenar resultados por relevancia (población, tipo de lugar, etc.)
@@ -191,6 +202,7 @@ export async function searchLocations(
   
   return processedResults;
 }
+
 export async function fetchForecast(
   lat: number,
   lon: number,

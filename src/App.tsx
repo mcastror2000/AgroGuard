@@ -133,7 +133,7 @@ export default function App() {
       } else if (e?.name === "NetworkError" || e?.message?.includes("fetch")) {
         errorMessage = "Error de conexión. Verifica tu internet e intenta nuevamente.";
       } else if (e?.message?.includes("not found")) {
-        errorMessage = `No se encontraron datos para "${query}". Intenta con una ciudad más grande como Santiago, Valparaíso o Concepción.`;
+        errorMessage = `Datos limitados para "${query}". Mostrando ubicación más cercana disponible o intenta con ciudades principales.`;
       }
       
       setError(errorMessage);

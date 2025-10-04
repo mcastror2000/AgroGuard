@@ -52,6 +52,7 @@ export function SearchBar({
       default: return '📍';
     }
   };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -156,11 +157,11 @@ export function SearchBar({
         </button>
       </div>
       
-      {/* Regiones populares */}
+      {/* Regiones y ciudades populares */}
       <div className="mt-4 pt-4 border-t border-gray-200">
-        <div className="text-sm text-gray-600 mb-2">Regiones populares:</div>
+        <div className="text-sm text-gray-600 mb-2">Ciudades con mejor cobertura meteorológica:</div>
         <div className="flex flex-wrap gap-2">
-          {['Santiago', 'Valparaíso', 'Concepción', 'La Serena', 'Temuco', 'Antofagasta'].map((city) => (
+          {['Santiago', 'Valparaíso', 'Concepción', 'La Serena', 'Temuco', 'Antofagasta', 'Rancagua', 'Talca'].map((city) => (
             <button
               key={city}
               onClick={() => {
